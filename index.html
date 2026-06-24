@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Agenda UNAB · Exámenes y Trabajos</title>
+
+<!-- ====== ONESIGNAL: notificaciones push ====== -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "ddc29696-7b13-4ede-a05f-75fbcbce8b3a",
+    });
+  });
+</script>
+
+<style>
+  :root{
+    --bg:#F3EFE3; --paper:#FFFFFF; --ink:#232946; --ink-dim:#7A7263;
+    --redpen:#C1392B; --line:#DDD4BD; --ok:#3F7150;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg);}
+  #app-root{
+    font-family:-apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+    background:var(--bg); color:var(--ink); max-width:480px; margin:0 auto;
+    min-height:100vh; padding-bottom:48px;
+  }
+  .header{padding:26px 20px 18px; border-bottom:2px solid var(--ink);}
+  .brand{font-family:Georgia,"Times New Roman",serif; font-weight:700; font-size:22px; margin:0;}
+  .brand .accent{color:var(--redpen);}
+  .subtitle{font-size:11.5px; letter-spacing:0.5px; color:var(--ink-dim); margin-top:5px;}
+  .tabs{display:flex; border-bottom:1px solid var(--line); background:var(--paper); flex-wrap:wrap;}
+  .tab{flex:1; min-width:80px; text-align:center; padding:13px 4px; font-size:11.5px; letter-spacing:0.3px;
+    color:var(--ink-dim); cursor:pointer; border-bottom:3px solid transparent;
+    background:none; border-top:none; border-left:none; border-right:none; font-family:inherit;}
+  .tab.active{color:var(--redpen); border-bottom-color:var(--redpen); font-weight:700;}
+  .panel{padding:20px 18px;}
+  .empty-state{text-align:center; padding:46px 18px; color:var(--ink-dim);}
+  .empty-state .big{font-size:26px; margin-bottom:8px;}
+  .empty-state p{font-size:13.5px; line-height:1.5; max-width:280px; margin:0 auto;}
+  .loading{text-align:center; padding:60px 20px; color:var(--ink-dim); font-size:13px;}
+
+  .item-card{background:var(--paper); border:1px solid var(--line); border-radius:10px;
+    padding:14px 14px 12px; margin-bottom:12px; display:flex; gap:12px; align-items:flex-start;}
+  .item-card.done{opacity:0.55;}
+  .ramo-chip{font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:20px; color:#fff; display:inline-block;}
+  .item-main{flex:1; min-width:0;}
+  .item-titulo{font-weight:700; font-size:14.5px; margin-top:6px;}
+  .item-titulo.done{text-decoration:line-through;}
+  .item-tipo{font-size:11.5px; color:var(--ink-dim); margin-top:2px;}
+  .item-fecha-row{font-size:11.5px; color:var(--ink-dim); margin-top:4px;}
+  .countdown{font-family:Georgia,serif; font-weight:700; font-size:12.5px; color:var(--redpen);
+    border:2px solid var(--redpen); border-radius:50%; width:56px; height:56px;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    flex-shrink:0; transform:rotate(-4deg); line-height:1.1; padding:4px;}
+  .countdown.urgent{background:rgba(193,57,43,0.08);}
+  .countdown.late{color:#fff; background:var(--redpen); border-color:var(--redpen);}
+  .countdown.done{color:var(--ok); border-color:var(--ok);}
+  .item-actions{display:flex; gap:12px; margin-top:8px; flex-wrap:wrap;}
+  .link-btn{background:none; border:none; color:var(--ink-dim); font-size:11px; cursor:pointer;
+    text-decoration:underline; font-family:inherit; padding:2px 0;}
+  .link-btn.done-toggle{color:var(--ok);}
+  .link-btn.del{color:var(--redpen);}
+  .rubrica-link{font-size:11px; color:var(--redpen); font-weight:700;}
+
+  .ramo-section{margin-bottom:22px;}
+  .ramo-header{display:flex; align-items:center; gap:8px; margin-bottom:10px;}
+  .ramo-tab{padding:5px 12px; border-radius:6px 6px 0 0; color:#fff; font-weight:700; font-size:13px; font-family:Georgia,serif;}
+  .ramo-count{font-size:11px; color:var(--ink-dim);}
+
+  .field{margin-bottom:14px;}
+  label{display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--ink-dim); margin-bottom:6px;}
+  input, select{width:100%; background:var(--paper); border:1px solid var(--line); color:var(--ink);
+    padding:12px; border-radius:7px; font-size:15px; font-family:inherit;}
+  input[type="file"]{padding:9px;}
+  input:focus, select:focus{outline:2px solid var(--redpen); border-color:var(--redpen);}
+  .row{display:flex; gap:10px;} .row .field{flex:1;}
+  .btn-primary{width:100%; background:var(--ink); color:#fff; font-weight:700; padding:14px;
+    border-radius:7px; border:none; font-size:14px; cursor:pointer;}
+  .btn-primary:disabled{opacity:0.6;}
+  .btn-secondary{width:100%; background:var(--paper); color:var(--ink); font-weight:700; padding:14px;
+    border-radius:7px; border:1.5px solid var(--ink); font-size:14px; cursor:pointer; margin-top:8px;}
+  .section-title{font-family:Georgia,serif; font-size:16px; font-weight:700; margin:0 0 14px;}
+  .divider{height:1px; background:var(--line); margin:24px 0;}
+  .ramo-pill-list{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+  .ramo-pill{font-size:11.5px; font-weight:700; color:#fff; padding:5px 10px; border-radius:20px;}
+  .hint{font-size:11.5px; color:var(--ink-dim); margin-top:8px; text-align:center;}
+  .error-banner{background:rgba(193,57,43,0.1); border:1px solid var(--redpen); color:var(--ink);
+    padding:12px 14px; border-radius:7px; font-size:13px; margin-bottom:16px;}
+  .saved-flash{background:rgba(63,113,80,0.12); border:1px solid var(--ok); color:var(--ink);
+    padding:12px 14px; border-radius:7px; font-size:13px; margin-bottom:16px;}
+</style>
+</head>
+<body>
+<div id="app-root"></div>
+<script>
+/* =========================================================
+   CONFIGURACION
+   ========================================================= */
+const CONFIG = {
+  API_URL: "https://script.google.com/macros/s/AKfycbzkqJfCKLcmRhedKWxtNFTSBfiZwzTZ9OZIpdapfbWzRZxYlqIcCObPl-ifNVfm2ve7Ew/exec"
+};
+
+(function(){
+  let ramos = [];
+  let items = [];
+  let loaded = false;
+  let activeTab = 'proximos';
+  let errorMsg = '';
+  let savedFlash = '';
+  let submitting = false;
+  let subscribeMsg = '';
+
+  const root = document.getElementById('app-root');
+
+  async function loadData(){
+    try{
+      const res = await fetch(CONFIG.API_URL);
+      const data = await res.json();
+      ramos = data.ramos || [];
+      items = data.items || [];
+      errorMsg = '';
+    }catch(e){
+      errorMsg = 'No se pudo conectar con la base de datos. Revisa la URL configurada.';
+    }
+    loaded = true;
+    render();
+  }
+
+  async function postAction(payload){
+    const res = await fetch(CONFIG.API_URL, { method:'POST', body: JSON.stringify(payload) });
+    return res.json();
+  }
+
+  function fileToBase64(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function ramoById(id){ return ramos.find(r => r.id === id); }
+
+  function countdownInfo(fecha, estado){
+    if(estado === 'hecho') return { label:'Listo', cls:'done' };
+    const today = new Date(); today.setHours(0,0,0,0);
+    const target = new Date(fecha + 'T00:00:00');
+    const diff = Math.round((target - today) / 86400000);
+    if(diff < 0) return { label:'Atrasado', cls:'late' };
+    if(diff === 0) return { label:'Hoy', cls:'urgent' };
+    if(diff === 1) return { label:'Mañana', cls:'urgent' };
+    if(diff <= 3) return { label:`En ${diff} días`, cls:'urgent' };
+    return { label:`En ${diff} días`, cls:'' };
+  }
+
+  async function addRamo(nombre){
+    submitting = true; render();
+    try{ await postAction({ action:'addRamo', nombre }); savedFlash = 'Ramo agregado.'; await loadData(); }
+    catch(e){ errorMsg = 'No se pudo agregar el ramo.'; }
+    submitting = false; render();
+    setTimeout(()=>{ savedFlash=''; render(); }, 2000);
+  }
+
+  async function addItem(ramoId, titulo, tipo, fecha, hora, file){
+    submitting = true; render();
+    try{
+      const payload = { action:'addItem', ramoId, titulo, tipo, fecha, hora };
+      if(file){
+        payload.rubricaBase64 = await fileToBase64(file);
+        payload.rubricaFileName = file.name;
+        payload.rubricaMime = file.type || 'application/pdf';
+      }
+      await postAction(payload);
+      savedFlash = 'Registrado. Se notificó por correo y push a los inscritos.';
+      await loadData();
+      activeTab = 'proximos';
+    }catch(e){
+      errorMsg = 'No se pudo guardar el registro.';
+    }
+    submitting = false; render();
+    setTimeout(()=>{ savedFlash=''; render(); }, 3500);
+  }
+
+  async function toggleDone(id, estadoActual){
+    try{
+      await postAction({ action:'toggleItem', id, estado: estadoActual === 'hecho' ? 'pendiente' : 'hecho' });
+      await loadData();
+    }catch(e){ errorMsg = 'No se pudo actualizar.'; render(); }
+  }
+
+  async function deleteItem(id){
+    try{ await postAction({ action:'deleteItem', id }); await loadData(); }
+    catch(e){ errorMsg = 'No se pudo eliminar.'; render(); }
+  }
+
+  async function subscribeEmail(email){
+    try{
+      await postAction({ action:'subscribe', email });
+      subscribeMsg = 'Listo, quedaste inscrito para avisos por correo.';
+    }catch(e){ subscribeMsg = 'No se pudo inscribir, intenta de nuevo.'; }
+    render();
+  }
+
+  function renderItemCard(item){
+    const ramo = ramoById(item.ramoid || item.ramoId);
+    const cd = countdownInfo(item.fecha, item.estado);
+    const isDone = item.estado === 'hecho';
+    const fechaFmt = new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-CL', { day:'numeric', month:'short' });
+    return `
+      <div class="item-card ${isDone ? 'done' : ''}">
+        <div class="countdown ${cd.cls}">${cd.label}</div>
+        <div class="item-main">
+          ${ramo ? `<span class="ramo-chip" style="background:${ramo.color}">${escapeHtml(ramo.nombre)}</span>` : ''}
+          <div class="item-titulo ${isDone ? 'done' : ''}">${escapeHtml(item.titulo)}</div>
+          <div class="item-tipo">${item.tipo === 'examen' ? 'Examen' : 'Trabajo'}</div>
+          <div class="item-fecha-row">${fechaFmt}${item.hora ? ' · ' + escapeHtml(item.hora) : ''}</div>
+          ${item.rubricaurl ? `<div style="margin-top:6px;"><a class="rubrica-link" href="${escapeHtml(item.rubricaurl)}" target="_blank">Ver rúbrica (PDF)</a></div>` : ''}
+          <div class="item-actions">
+            <button class="link-btn done-toggle" data-action="toggle" data-id="${item.id}" data-estado="${item.estado}">
+              ${isDone ? 'Marcar pendiente' : 'Marcar listo'}
+            </button>
+            <button class="link-btn del" data-action="delete" data-id="${item.id}">Eliminar</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderProximos(){
+    const pendientes = items.filter(i => i.estado !== 'hecho').sort((a,b) => a.fecha.localeCompare(b.fecha));
+    if(ramos.length === 0) return `<div class="empty-state"><div class="big">—</div><p>Aún no hay ramos creados. Ve a la pestaña "Nuevo" para crear el primero.</p></div>`;
+    if(pendientes.length === 0) return `<div class="empty-state"><div class="big">—</div><p>No hay fechas pendientes registradas.</p></div>`;
+    return `<div class="panel">${pendientes.map(renderItemCard).join('')}</div>`;
+  }
+
+  function renderPorRamo(){
+    if(ramos.length === 0) return `<div class="empty-state"><div class="big">—</div><p>Aún no hay ningún ramo creado.</p></div>`;
+    return `<div class="panel">` + ramos.map(ramo => {
+      const its = items.filter(i => (i.ramoid || i.ramoId) === ramo.id).sort((a,b) => a.fecha.localeCompare(b.fecha));
+      return `
+        <div class="ramo-section">
+          <div class="ramo-header">
+            <span class="ramo-tab" style="background:${ramo.color}">${escapeHtml(ramo.nombre)}</span>
+            <span class="ramo-count">${its.length} fecha${its.length===1?'':'s'}</span>
+          </div>
+          ${its.length === 0 ? `<div class="hint">Sin fechas registradas para este ramo.</div>` : its.map(renderItemCard).join('')}
+        </div>`;
+    }).join('') + `</div>`;
+  }
+
+  function renderNuevo(){
+    const ramoOptions = ramos.map(r => `<option value="${r.id}">${escapeHtml(r.nombre)}</option>`).join('');
+    return `
+      <div class="panel">
+        ${errorMsg ? `<div class="error-banner">${escapeHtml(errorMsg)}</div>` : ''}
+        ${savedFlash ? `<div class="saved-flash">${escapeHtml(savedFlash)}</div>` : ''}
+
+        <p class="section-title">Agregar ramo</p>
+        <form id="form-ramo">
+          <div class="field"><label for="ramo-nombre">Nombre del ramo</label>
+            <input type="text" id="ramo-nombre" placeholder="Ej: Cálculo II" required /></div>
+          <button type="submit" class="btn-secondary" ${submitting?'disabled':''}>+ Agregar ramo</button>
+        </form>
+
+        ${ramos.length > 0 ? `<div class="ramo-pill-list">${ramos.map(r => `<span class="ramo-pill" style="background:${r.color}">${escapeHtml(r.nombre)}</span>`).join('')}</div>` : ''}
+
+        <div class="divider"></div>
+
+        <p class="section-title">Agregar examen o trabajo</p>
+        ${ramos.length === 0 ? `<p class="hint">Primero crea al menos un ramo arriba.</p>` : `
+        <form id="form-item">
+          <div class="field"><label for="item-ramo">Ramo</label><select id="item-ramo" required>${ramoOptions}</select></div>
+          <div class="field"><label for="item-titulo">Título</label>
+            <input type="text" id="item-titulo" placeholder="Ej: Examen parcial, Tarea 3" required /></div>
+          <div class="row">
+            <div class="field"><label for="item-tipo">Tipo</label>
+              <select id="item-tipo"><option value="examen">Examen</option><option value="trabajo">Trabajo</option></select></div>
+            <div class="field"><label for="item-fecha">Fecha</label><input type="date" id="item-fecha" required /></div>
+          </div>
+          <div class="field"><label for="item-hora">Hora (opcional)</label><input type="time" id="item-hora" /></div>
+          <div class="field"><label for="item-rubrica">Rúbrica en PDF (opcional)</label>
+            <input type="file" id="item-rubrica" accept="application/pdf" /></div>
+          <button type="submit" class="btn-primary" ${submitting?'disabled':''}>${submitting ? 'Guardando...' : '+ Agregar fecha'}</button>
+        </form>`}
+      </div>
+    `;
+  }
+
+  function renderRegistro(){
+    return `
+      <div class="panel">
+        <p class="section-title">Recibir avisos</p>
+        <p class="hint" style="margin-bottom:16px;">Inscríbete una sola vez para recibir un correo cada vez que alguien agregue un examen o trabajo nuevo. Las notificaciones push del celular se activan al aceptar el permiso que te pida el navegador al entrar a esta página.</p>
+        ${subscribeMsg ? `<div class="saved-flash">${escapeHtml(subscribeMsg)}</div>` : ''}
+        <form id="form-subscribe">
+          <div class="field"><label for="sub-email">Tu correo</label>
+            <input type="email" id="sub-email" placeholder="tu.correo@uandresbello.edu" required /></div>
+          <button type="submit" class="btn-primary">Inscribirme a avisos por correo</button>
+        </form>
+      </div>
+    `;
+  }
+
+  function render(){
+    if(!loaded){ root.innerHTML = `<div class="loading">Cargando agenda…</div>`; return; }
+    root.innerHTML = `
+      <div class="header">
+        <p class="brand">AGENDA <span class="accent">UNAB</span></p>
+        <p class="subtitle">Exámenes y trabajos por ramo</p>
+      </div>
+      <div class="tabs">
+        <button class="tab ${activeTab==='proximos'?'active':''}" data-tab="proximos">Próximos</button>
+        <button class="tab ${activeTab==='ramo'?'active':''}" data-tab="ramo">Por ramo</button>
+        <button class="tab ${activeTab==='nuevo'?'active':''}" data-tab="nuevo">Nuevo</button>
+        <button class="tab ${activeTab==='registro'?'active':''}" data-tab="registro">Avisos</button>
+      </div>
+      ${activeTab==='proximos' ? renderProximos() : activeTab==='ramo' ? renderPorRamo() : activeTab==='nuevo' ? renderNuevo() : renderRegistro()}
+    `;
+    attachEvents();
+  }
+
+  function attachEvents(){
+    root.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => { activeTab = btn.dataset.tab; render(); }));
+    root.querySelectorAll('[data-action="toggle"]').forEach(el => el.addEventListener('click', () => toggleDone(el.dataset.id, el.dataset.estado)));
+    root.querySelectorAll('[data-action="delete"]').forEach(el => el.addEventListener('click', () => deleteItem(el.dataset.id)));
+
+    const formRamo = root.querySelector('#form-ramo');
+    if(formRamo) formRamo.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const nombre = root.querySelector('#ramo-nombre').value.trim();
+      if(nombre) addRamo(nombre);
+    });
+
+    const formItem = root.querySelector('#form-item');
+    if(formItem) formItem.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const ramoId = root.querySelector('#item-ramo').value;
+      const titulo = root.querySelector('#item-titulo').value.trim();
+      const tipo = root.querySelector('#item-tipo').value;
+      const fecha = root.querySelector('#item-fecha').value;
+      const hora = root.querySelector('#item-hora').value;
+      const fileInput = root.querySelector('#item-rubrica');
+      const file = fileInput.files[0] || null;
+      if(ramoId && titulo && fecha) addItem(ramoId, titulo, tipo, fecha, hora, file);
+    });
+
+    const formSub = root.querySelector('#form-subscribe');
+    if(formSub) formSub.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const email = root.querySelector('#sub-email').value.trim();
+      if(email) subscribeEmail(email);
+    });
+  }
+
+  loadData();
+  setInterval(loadData, 20000);
+})();
+</script>
+</body>
+</html>
