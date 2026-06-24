@@ -362,7 +362,9 @@ const CONFIG = {
   }
 
   loadData();
-  setInterval(loadData, 20000);
+  setInterval(() => {
+    if(activeTab === 'proximos' || activeTab === 'ramo'){ loadData(); }
+  }, 20000);
 })();
 </script>
 </body>
