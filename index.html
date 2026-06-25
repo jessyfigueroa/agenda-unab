@@ -295,8 +295,20 @@ const CONFIG = {
     `;
 }
   function renderProximos(){
-    const pendientes = items.filter(i => i.estado !== 'hecho').sort((a,b) => a.fecha.localeCompare(b.fecha));
-    if(ramos.length === 0) return `<div class="empty-state"><div class="big">—</div><p>Aún no hay ramos creados. Ve a la pestaña "Nuevo" para crear el primero.</p></div>`;
+    const pendientes = items
+  .filter(i => i.estado !== 'hecho')
+  .sort((a,b) => {
+    const fa = a["fecha de termino"] || a["fecha de inicio"] || "";
+    const fb = b["fecha de termino"] || b["fecha de inicio"] || "";
+    return fa.localeCompare(fb);
+  });
+    const its = items
+  .filter(i => (i.ramoid || i.ramoId) === ramo.id)
+  .sort((a,b) => {
+    const fa = a["fecha de termino"] || a["fecha de inicio"] || "";
+    const fb = b["fecha de termino"] || b["fecha de inicio"] || "";
+    return fa.localeCompare(fb);
+  });
     if(pendientes.length === 0) return `<div class="empty-state"><div class="big">—</div><p>No hay fechas pendientes registradas.</p></div>`;
     return `<div class="panel">${pendientes.map(renderItemCard).join('')}</div>`;
   }
