@@ -101,8 +101,9 @@
    CONFIGURACION
    ========================================================= */
 const CONFIG = {
-  API_URL: "https://script.google.com/macros/s/AKfycbygjo6WHllzHIXgjfRFWCvYyvFNWUkVfUZzqygJDDPy4seembI23WmIudgm8mIUW-5HgA/exec"
+  API_URL: "https://script.google.com/macros/s/AKfycbzkqJfCKLcmRhedKWxtNFTSBfiZwzTZ9OZIpdapfbWzRZxYlqIcCObPl-ifNVfm2ve7Ew/exec"
 };
+
 (function(){
   let ramos = [];
   let items = [];
@@ -169,10 +170,10 @@ const CONFIG = {
     setTimeout(()=>{ savedFlash=''; render(); }, 2000);
   }
 
-  async function addItem(ramoId, titulo, tipo, fechaInicio, fechaTermino, hora, file){
+  async function addItem(ramoId, titulo, tipo, fecha, hora, file){
     submitting = true; render();
     try{
-      const payload = { action:'addItem', ramoId, titulo, tipo, fechaInicio, fechaTermino, hora };
+      const payload = { action:'addItem', ramoId, titulo, tipo, fecha, hora };
       if(file){
         payload.rubricaBase64 = await fileToBase64(file);
         payload.rubricaFileName = file.name;
@@ -210,105 +211,33 @@ const CONFIG = {
   }
 
   function renderItemCard(item){
-
     const ramo = ramoById(item.ramoid || item.ramoId);
-
-    const fechaInicio = item["fecha de inicio"] || "";
-    const fechaTermino = item["fecha de termino"] || "";
-
-    const fechaContador = fechaTermino || fechaInicio;
-
-    const cd = countdownInfo(fechaContador, item.estado);
-
-    const isDone = item.estado === "hecho";
-
-    const inicioFmt = fechaInicio
-        ? new Date(fechaInicio).toLocaleDateString("es-CL")
-        : "-";
-
-    const terminoFmt = fechaTermino
-        ? new Date(fechaTermino).toLocaleDateString("es-CL")
-        : "-";
-
+    const cd = countdownInfo(item.fecha, item.estado);
+    const isDone = item.estado === 'hecho';
+    const fechaFmt = new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-CL', { day:'numeric', month:'short' });
     return `
       <div class="item-card ${isDone ? 'done' : ''}">
-
-        <div class="countdown ${cd.cls}">
-            ${cd.label}
-        </div>
-
+        <div class="countdown ${cd.cls}">${cd.label}</div>
         <div class="item-main">
-
-          ${ramo ? `<span class="ramo-chip" style="background:${ramo.color}">
-            ${escapeHtml(ramo.nombre)}
-          </span>` : ''}
-
-          <div class="item-titulo ${isDone ? 'done' : ''}">
-            ${escapeHtml(item.titulo)}
-          </div>
-
-          <div class="item-tipo">
-            ${item.tipo === 'examen' ? 'Examen' : 'Trabajo'}
-          </div>
-
-          <div class="item-fecha-row">
-            📅 Inicio: ${inicioFmt}
-          </div>
-
-          <div class="item-fecha-row">
-            🏁 Término: ${terminoFmt}
-          </div>
-
-          ${item.hora ? `<div class="item-fecha-row">🕒 ${item.hora}</div>` : ""}
-
-          ${item.rubricaurl ? `
-          <div style="margin-top:6px;">
-            <a class="rubrica-link"
-               href="${escapeHtml(item.rubricaurl)}"
-               target="_blank">
-               Ver rúbrica (PDF)
-            </a>
-          </div>` : ""}
-
+          ${ramo ? `<span class="ramo-chip" style="background:${ramo.color}">${escapeHtml(ramo.nombre)}</span>` : ''}
+          <div class="item-titulo ${isDone ? 'done' : ''}">${escapeHtml(item.titulo)}</div>
+          <div class="item-tipo">${item.tipo === 'examen' ? 'Examen' : 'Trabajo'}</div>
+          <div class="item-fecha-row">${fechaFmt}${item.hora ? ' · ' + escapeHtml(item.hora) : ''}</div>
+          ${item.rubricaurl ? `<div style="margin-top:6px;"><a class="rubrica-link" href="${escapeHtml(item.rubricaurl)}" target="_blank">Ver rúbrica (PDF)</a></div>` : ''}
           <div class="item-actions">
-
-            <button
-              class="link-btn done-toggle"
-              data-action="toggle"
-              data-id="${item.id}"
-              data-estado="${item.estado}">
-              ${isDone ? "Marcar pendiente" : "Marcar listo"}
+            <button class="link-btn done-toggle" data-action="toggle" data-id="${item.id}" data-estado="${item.estado}">
+              ${isDone ? 'Marcar pendiente' : 'Marcar listo'}
             </button>
-
-            <button
-              class="link-btn del"
-              data-action="delete"
-              data-id="${item.id}">
-              Eliminar
-            </button>
-
+            <button class="link-btn del" data-action="delete" data-id="${item.id}">Eliminar</button>
           </div>
-
         </div>
-
       </div>
     `;
-}
+  }
+
   function renderProximos(){
-    const pendientes = items
-  .filter(i => i.estado !== 'hecho')
-  .sort((a,b) => {
-    const fa = a["fecha de termino"] || a["fecha de inicio"] || "";
-    const fb = b["fecha de termino"] || b["fecha de inicio"] || "";
-    return fa.localeCompare(fb);
-  });
-    const its = items
-  .filter(i => (i.ramoid || i.ramoId) === ramo.id)
-  .sort((a,b) => {
-    const fa = a["fecha de termino"] || a["fecha de inicio"] || "";
-    const fb = b["fecha de termino"] || b["fecha de inicio"] || "";
-    return fa.localeCompare(fb);
-  });
+    const pendientes = items.filter(i => i.estado !== 'hecho').sort((a,b) => a.fecha.localeCompare(b.fecha));
+    if(ramos.length === 0) return `<div class="empty-state"><div class="big">—</div><p>Aún no hay ramos creados. Ve a la pestaña "Nuevo" para crear el primero.</p></div>`;
     if(pendientes.length === 0) return `<div class="empty-state"><div class="big">—</div><p>No hay fechas pendientes registradas.</p></div>`;
     return `<div class="panel">${pendientes.map(renderItemCard).join('')}</div>`;
   }
@@ -353,26 +282,10 @@ const CONFIG = {
           <div class="field"><label for="item-titulo">Título</label>
             <input type="text" id="item-titulo" placeholder="Ej: Examen parcial, Tarea 3" required /></div>
           <div class="row">
-  <div class="field">
-    <label for="item-tipo">Tipo</label>
-    <select id="item-tipo">
-      <option value="examen">Examen</option>
-      <option value="trabajo">Trabajo</option>
-    </select>
-  </div>
-</div>
-
-<div class="row">
-  <div class="field">
-    <label for="item-fecha-inicio">Fecha de inicio</label>
-    <input type="date" id="item-fecha-inicio" required />
-  </div>
-
-  <div class="field">
-    <label for="item-fecha-termino">Fecha de término</label>
-    <input type="date" id="item-fecha-termino" />
-  </div>
-</div>
+            <div class="field"><label for="item-tipo">Tipo</label>
+              <select id="item-tipo"><option value="examen">Examen</option><option value="trabajo">Trabajo</option></select></div>
+            <div class="field"><label for="item-fecha">Fecha</label><input type="date" id="item-fecha" required /></div>
+          </div>
           <div class="field"><label for="item-hora">Hora (opcional)</label><input type="time" id="item-hora" /></div>
           <div class="field"><label for="item-rubrica">Rúbrica en PDF (opcional)</label>
             <input type="file" id="item-rubrica" accept="application/pdf" /></div>
@@ -433,24 +346,13 @@ const CONFIG = {
       const ramoId = root.querySelector('#item-ramo').value;
       const titulo = root.querySelector('#item-titulo').value.trim();
       const tipo = root.querySelector('#item-tipo').value;
-      const fechaInicio = root.querySelector('#item-fecha-inicio').value;
-const fechaTermino = root.querySelector('#item-fecha-termino').value;
-const hora = root.querySelector('#item-hora').value;
-const fileInput = root.querySelector('#item-rubrica');
-const file = fileInput.files[0] || null;
+      const fecha = root.querySelector('#item-fecha').value;
+      const hora = root.querySelector('#item-hora').value;
+      const fileInput = root.querySelector('#item-rubrica');
+      const file = fileInput.files[0] || null;
+      if(ramoId && titulo && fecha) addItem(ramoId, titulo, tipo, fecha, hora, file);
+    });
 
-if (ramoId && titulo && fechaInicio) {
-    addItem(
-        ramoId,
-        titulo,
-        tipo,
-        fechaInicio,
-        fechaTermino,
-        hora,
-        file
-    );
-}
-});
     const formSub = root.querySelector('#form-subscribe');
     if(formSub) formSub.addEventListener('submit', (ev) => {
       ev.preventDefault();
@@ -460,6 +362,7 @@ if (ramoId && titulo && fechaInicio) {
   }
 
   loadData();
+  setInterval(loadData, 20000);
 })();
 </script>
 </body>
