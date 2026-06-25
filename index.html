@@ -170,10 +170,10 @@ const CONFIG = {
     setTimeout(()=>{ savedFlash=''; render(); }, 2000);
   }
 
-  async function addItem(ramoId, titulo, tipo, fecha, hora, file){
+  async function addItem(ramoId, titulo, tipo, fechaInicio, fechaTermino, hora, file){
     submitting = true; render();
     try{
-      const payload = { action:'addItem', ramoId, titulo, tipo, fecha, hora };
+      const payload = { action:'addItem', ramoId, titulo, tipo, fechaInicio, fechaTermino, hora };
       if(file){
         payload.rubricaBase64 = await fileToBase64(file);
         payload.rubricaFileName = file.name;
@@ -282,10 +282,26 @@ const CONFIG = {
           <div class="field"><label for="item-titulo">Título</label>
             <input type="text" id="item-titulo" placeholder="Ej: Examen parcial, Tarea 3" required /></div>
           <div class="row">
-            <div class="field"><label for="item-tipo">Tipo</label>
-              <select id="item-tipo"><option value="examen">Examen</option><option value="trabajo">Trabajo</option></select></div>
-            <div class="field"><label for="item-fecha">Fecha</label><input type="date" id="item-fecha" required /></div>
-          </div>
+  <div class="field">
+    <label for="item-tipo">Tipo</label>
+    <select id="item-tipo">
+      <option value="examen">Examen</option>
+      <option value="trabajo">Trabajo</option>
+    </select>
+  </div>
+</div>
+
+<div class="row">
+  <div class="field">
+    <label for="item-fecha-inicio">Fecha de inicio</label>
+    <input type="date" id="item-fecha-inicio" required />
+  </div>
+
+  <div class="field">
+    <label for="item-fecha-termino">Fecha de término</label>
+    <input type="date" id="item-fecha-termino" />
+  </div>
+</div>
           <div class="field"><label for="item-hora">Hora (opcional)</label><input type="time" id="item-hora" /></div>
           <div class="field"><label for="item-rubrica">Rúbrica en PDF (opcional)</label>
             <input type="file" id="item-rubrica" accept="application/pdf" /></div>
@@ -346,13 +362,24 @@ const CONFIG = {
       const ramoId = root.querySelector('#item-ramo').value;
       const titulo = root.querySelector('#item-titulo').value.trim();
       const tipo = root.querySelector('#item-tipo').value;
-      const fecha = root.querySelector('#item-fecha').value;
-      const hora = root.querySelector('#item-hora').value;
-      const fileInput = root.querySelector('#item-rubrica');
-      const file = fileInput.files[0] || null;
-      if(ramoId && titulo && fecha) addItem(ramoId, titulo, tipo, fecha, hora, file);
-    });
+      const fechaInicio = root.querySelector('#item-fecha-inicio').value;
+const fechaTermino = root.querySelector('#item-fecha-termino').value;
+const hora = root.querySelector('#item-hora').value;
+const fileInput = root.querySelector('#item-rubrica');
+const file = fileInput.files[0] || null;
 
+if (ramoId && titulo && fechaInicio) {
+    addItem(
+        ramoId,
+        titulo,
+        tipo,
+        fechaInicio,
+        fechaTermino,
+        hora,
+        file
+    );
+}
+});
     const formSub = root.querySelector('#form-subscribe');
     if(formSub) formSub.addEventListener('submit', (ev) => {
       ev.preventDefault();
