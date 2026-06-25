@@ -211,30 +211,90 @@ const CONFIG = {
   }
 
   function renderItemCard(item){
+
     const ramo = ramoById(item.ramoid || item.ramoId);
-    const cd = countdownInfo(item.fecha, item.estado);
-    const isDone = item.estado === 'hecho';
-    const fechaFmt = new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-CL', { day:'numeric', month:'short' });
+
+    const fechaInicio = item["fecha de inicio"] || "";
+    const fechaTermino = item["fecha de termino"] || "";
+
+    const fechaContador = fechaTermino || fechaInicio;
+
+    const cd = countdownInfo(fechaContador, item.estado);
+
+    const isDone = item.estado === "hecho";
+
+    const inicioFmt = fechaInicio
+        ? new Date(fechaInicio).toLocaleDateString("es-CL")
+        : "-";
+
+    const terminoFmt = fechaTermino
+        ? new Date(fechaTermino).toLocaleDateString("es-CL")
+        : "-";
+
     return `
       <div class="item-card ${isDone ? 'done' : ''}">
-        <div class="countdown ${cd.cls}">${cd.label}</div>
-        <div class="item-main">
-          ${ramo ? `<span class="ramo-chip" style="background:${ramo.color}">${escapeHtml(ramo.nombre)}</span>` : ''}
-          <div class="item-titulo ${isDone ? 'done' : ''}">${escapeHtml(item.titulo)}</div>
-          <div class="item-tipo">${item.tipo === 'examen' ? 'Examen' : 'Trabajo'}</div>
-          <div class="item-fecha-row">${fechaFmt}${item.hora ? ' · ' + escapeHtml(item.hora) : ''}</div>
-          ${item.rubricaurl ? `<div style="margin-top:6px;"><a class="rubrica-link" href="${escapeHtml(item.rubricaurl)}" target="_blank">Ver rúbrica (PDF)</a></div>` : ''}
-          <div class="item-actions">
-            <button class="link-btn done-toggle" data-action="toggle" data-id="${item.id}" data-estado="${item.estado}">
-              ${isDone ? 'Marcar pendiente' : 'Marcar listo'}
-            </button>
-            <button class="link-btn del" data-action="delete" data-id="${item.id}">Eliminar</button>
-          </div>
+
+        <div class="countdown ${cd.cls}">
+            ${cd.label}
         </div>
+
+        <div class="item-main">
+
+          ${ramo ? `<span class="ramo-chip" style="background:${ramo.color}">
+            ${escapeHtml(ramo.nombre)}
+          </span>` : ''}
+
+          <div class="item-titulo ${isDone ? 'done' : ''}">
+            ${escapeHtml(item.titulo)}
+          </div>
+
+          <div class="item-tipo">
+            ${item.tipo === 'examen' ? 'Examen' : 'Trabajo'}
+          </div>
+
+          <div class="item-fecha-row">
+            📅 Inicio: ${inicioFmt}
+          </div>
+
+          <div class="item-fecha-row">
+            🏁 Término: ${terminoFmt}
+          </div>
+
+          ${item.hora ? `<div class="item-fecha-row">🕒 ${item.hora}</div>` : ""}
+
+          ${item.rubricaurl ? `
+          <div style="margin-top:6px;">
+            <a class="rubrica-link"
+               href="${escapeHtml(item.rubricaurl)}"
+               target="_blank">
+               Ver rúbrica (PDF)
+            </a>
+          </div>` : ""}
+
+          <div class="item-actions">
+
+            <button
+              class="link-btn done-toggle"
+              data-action="toggle"
+              data-id="${item.id}"
+              data-estado="${item.estado}">
+              ${isDone ? "Marcar pendiente" : "Marcar listo"}
+            </button>
+
+            <button
+              class="link-btn del"
+              data-action="delete"
+              data-id="${item.id}">
+              Eliminar
+            </button>
+
+          </div>
+
+        </div>
+
       </div>
     `;
-  }
-
+}
   function renderProximos(){
     const pendientes = items.filter(i => i.estado !== 'hecho').sort((a,b) => a.fecha.localeCompare(b.fecha));
     if(ramos.length === 0) return `<div class="empty-state"><div class="big">—</div><p>Aún no hay ramos creados. Ve a la pestaña "Nuevo" para crear el primero.</p></div>`;
