@@ -101,7 +101,7 @@
    CONFIGURACION
    ========================================================= */
 const CONFIG = {
-  API_URL: "https://script.google.com/macros/s/AKfycbzkqJfCKLcmRhedKWxtNFTSBfiZwzTZ9OZIpdapfbWzRZxYlqIcCObPl-ifNVfm2ve7Ew/exec"
+  API_URL: "https://script.google.com/macros/s/AKfycbxhH4pgudSFOjBfGmqnB7twRYIoKKrNXfHiPJHKFC18Soi2IQns4V-xa5bH9UmD_lOarg/exec"
 };
 
 (function(){
@@ -150,10 +150,10 @@ const CONFIG = {
 
   function ramoById(id){ return ramos.find(r => r.id === id); }
 
-  function countdownInfo(fecha, estado){
+  function countdownInfo(fechaLimite, estado){
     if(estado === 'hecho') return { label:'Listo', cls:'done' };
     const today = new Date(); today.setHours(0,0,0,0);
-    const target = new Date(fecha + 'T00:00:00');
+    const target = new Date(fechaLimite + 'T00:00:00');
     const diff = Math.round((target - today) / 86400000);
     if(diff < 0) return { label:'Atrasado', cls:'late' };
     if(diff === 0) return { label:'Hoy', cls:'urgent' };
@@ -170,10 +170,10 @@ const CONFIG = {
     setTimeout(()=>{ savedFlash=''; render(); }, 2000);
   }
 
-  async function addItem(ramoId, titulo, tipo, fecha, hora, file){
+  async function addItem(ramoId, titulo, tipo, fecha, fechaFin, hora, file){
     submitting = true; render();
     try{
-      const payload = { action:'addItem', ramoId, titulo, tipo, fecha, hora };
+      const payload = { action:'addItem', ramoId, titulo, tipo, fecha, fechaFin, hora };
       if(file){
         payload.rubricaBase64 = await fileToBase64(file);
         payload.rubricaFileName = file.name;
@@ -212,9 +212,11 @@ const CONFIG = {
 
   function renderItemCard(item){
     const ramo = ramoById(item.ramoid || item.ramoId);
-    const cd = countdownInfo(item.fecha, item.estado);
+    const fechaFin = item.fechafin || item.fechaFin;
+    const cd = countdownInfo(fechaFin, item.estado);
     const isDone = item.estado === 'hecho';
-    const fechaFmt = new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-CL', { day:'numeric', month:'short' });
+    const fechaFinFmt = new Date(fechaFin + 'T00:00:00').toLocaleDateString('es-CL', { day:'numeric', month:'short' });
+    const fechaInicioFmt = item.fecha ? new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-CL', { day:'numeric', month:'short' }) : '';
     return `
       <div class="item-card ${isDone ? 'done' : ''}">
         <div class="countdown ${cd.cls}">${cd.label}</div>
@@ -222,7 +224,7 @@ const CONFIG = {
           ${ramo ? `<span class="ramo-chip" style="background:${ramo.color}">${escapeHtml(ramo.nombre)}</span>` : ''}
           <div class="item-titulo ${isDone ? 'done' : ''}">${escapeHtml(item.titulo)}</div>
           <div class="item-tipo">${item.tipo === 'examen' ? 'Examen' : 'Trabajo'}</div>
-          <div class="item-fecha-row">${fechaFmt}${item.hora ? ' · ' + escapeHtml(item.hora) : ''}</div>
+          <div class="item-fecha-row">${fechaInicioFmt ? `Desde ${fechaInicioFmt} hasta ` : 'Vence '}${fechaFinFmt}${item.hora ? ' · ' + escapeHtml(item.hora) : ''}</div>
           ${item.rubricaurl ? `<div style="margin-top:6px;"><a class="rubrica-link" href="${escapeHtml(item.rubricaurl)}" target="_blank">Ver rúbrica (PDF)</a></div>` : ''}
           <div class="item-actions">
             <button class="link-btn done-toggle" data-action="toggle" data-id="${item.id}" data-estado="${item.estado}">
@@ -236,7 +238,7 @@ const CONFIG = {
   }
 
   function renderProximos(){
-    const pendientes = items.filter(i => i.estado !== 'hecho').sort((a,b) => a.fecha.localeCompare(b.fecha));
+    const pendientes = items.filter(i => i.estado !== 'hecho').sort((a,b) => (a.fechafin||'').localeCompare(b.fechafin||''));
     if(ramos.length === 0) return `<div class="empty-state"><div class="big">—</div><p>Aún no hay ramos creados. Ve a la pestaña "Nuevo" para crear el primero.</p></div>`;
     if(pendientes.length === 0) return `<div class="empty-state"><div class="big">—</div><p>No hay fechas pendientes registradas.</p></div>`;
     return `<div class="panel">${pendientes.map(renderItemCard).join('')}</div>`;
@@ -245,7 +247,7 @@ const CONFIG = {
   function renderPorRamo(){
     if(ramos.length === 0) return `<div class="empty-state"><div class="big">—</div><p>Aún no hay ningún ramo creado.</p></div>`;
     return `<div class="panel">` + ramos.map(ramo => {
-      const its = items.filter(i => (i.ramoid || i.ramoId) === ramo.id).sort((a,b) => a.fecha.localeCompare(b.fecha));
+      const its = items.filter(i => (i.ramoid || i.ramoId) === ramo.id).sort((a,b) => (a.fechafin||'').localeCompare(b.fechafin||''));
       return `
         <div class="ramo-section">
           <div class="ramo-header">
@@ -284,8 +286,9 @@ const CONFIG = {
           <div class="row">
             <div class="field"><label for="item-tipo">Tipo</label>
               <select id="item-tipo"><option value="examen">Examen</option><option value="trabajo">Trabajo</option></select></div>
-            <div class="field"><label for="item-fecha">Fecha</label><input type="date" id="item-fecha" required /></div>
+            <div class="field"><label for="item-fecha">Fecha de inicio (opcional)</label><input type="date" id="item-fecha" /></div>
           </div>
+          <div class="field"><label for="item-fecha-fin">Fecha de término</label><input type="date" id="item-fecha-fin" required /></div>
           <div class="field"><label for="item-hora">Hora (opcional)</label><input type="time" id="item-hora" /></div>
           <div class="field"><label for="item-rubrica">Rúbrica en PDF (opcional)</label>
             <input type="file" id="item-rubrica" accept="application/pdf" /></div>
@@ -347,10 +350,11 @@ const CONFIG = {
       const titulo = root.querySelector('#item-titulo').value.trim();
       const tipo = root.querySelector('#item-tipo').value;
       const fecha = root.querySelector('#item-fecha').value;
+      const fechaFin = root.querySelector('#item-fecha-fin').value;
       const hora = root.querySelector('#item-hora').value;
       const fileInput = root.querySelector('#item-rubrica');
       const file = fileInput.files[0] || null;
-      if(ramoId && titulo && fecha) addItem(ramoId, titulo, tipo, fecha, hora, file);
+      if(ramoId && titulo && fechaFin) addItem(ramoId, titulo, tipo, fecha, fechaFin, hora, file);
     });
 
     const formSub = root.querySelector('#form-subscribe');
@@ -362,7 +366,6 @@ const CONFIG = {
   }
 
   loadData();
-  setInterval(loadData, 20000);
 })();
 </script>
 </body>
